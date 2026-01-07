@@ -6,6 +6,7 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
+
 # --------------------------------------------------
 # Flask App
 # --------------------------------------------------
@@ -28,21 +29,25 @@ def get_today_ist():
     return datetime.now(ist).strftime("%Y-%m-%d")
 
 # --------------------------------------------------
-# Home Route (Health Check)
+# Home Route (Server + DB Health Check)
 # --------------------------------------------------
 @app.route("/")
 def home():
     try:
-        # simple ping
         client.admin.command("ping")
         return jsonify({
             "status": "success",
-            "message": "MongoDB connected successfully 🚀"
-        })
+            "message": "Server running successfully 🚀",
+            "database": "MongoDB connected successfully",
+            "timestamp_ist": datetime.now(
+                pytz.timezone("Asia/Kolkata")
+            ).strftime("%Y-%m-%d %H:%M:%S")
+        }), 200
     except Exception as e:
         return jsonify({
             "status": "error",
-            "message": str(e)
+            "message": "Server running, but MongoDB connection failed ❌",
+            "error": str(e)
         }), 500
 
 # --------------------------------------------------
@@ -54,7 +59,7 @@ def get_today_options():
 
     doc = collection.find_one(
         {"trade_date": today},
-        {"_id": 0}  # hide Mongo _id
+        {"_id": 0}
     )
 
     if not doc:
@@ -64,17 +69,14 @@ def get_today_options():
             "message": "Data not loaded yet, wait for workflow loading"
         }), 202
 
-    # Clean / structured response
-    response = {
+    return jsonify({
         "status": "success",
         "trade_date": doc.get("trade_date"),
         "data": doc.get("data", {})
-    }
-
-    return jsonify(response), 200
+    }), 200
 
 # --------------------------------------------------
-# Vercel Entry Point
+# Local Run
 # --------------------------------------------------
 if __name__ == "__main__":
     app.run(debug=True)
