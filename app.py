@@ -76,6 +76,50 @@ def get_today_options():
     }), 200
 
 # --------------------------------------------------
+# Fetch Options Data By Date
+# Example: /api/options/date?date=2026-01-09
+# --------------------------------------------------
+@app.route("/api/options/date", methods=["GET"])
+def get_options_by_date():
+    from flask import request
+
+    date_str = request.args.get("date")
+
+    # Validate input
+    if not date_str:
+        return jsonify({
+            "status": "error",
+            "message": "Missing date parameter. Use format: /api/options/date?date=YYYY-MM-DD"
+        }), 400
+
+    # Validate date format
+    try:
+        datetime.strptime(date_str, "%Y-%m-%d")
+    except ValueError:
+        return jsonify({
+            "status": "error",
+            "message": "Invalid date format. Use YYYY-MM-DD"
+        }), 400
+
+    doc = collection.find_one(
+        {"trade_date": date_str},
+        {"_id": 0}
+    )
+
+    if not doc:
+        return jsonify({
+            "status": "pending",
+            "trade_date": date_str,
+            "message": "Data not found for this date"
+        }), 202
+
+    return jsonify({
+        "status": "success",
+        "trade_date": doc.get("trade_date"),
+        "data": doc.get("data", {})
+    }), 200
+
+# --------------------------------------------------
 # Local Run
 # --------------------------------------------------
 if __name__ == "__main__":
